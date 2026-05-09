@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Financial Dashboard</title>
+    <!-- โหลด Tailwind CSS เพื่อความสวยงามของการจัดหน้าจอ -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด Chart.js สำหรับสร้างกราฟ Interactive -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">📊 Dashboard วิเคราะห์รายรับ-รายจ่าย</h1>
+                <p class="text-gray-500 mt-1">เปรียบเทียบข้อมูล มกราคม - กุมภาพันธ์ (ข้อมูลตัวอย่างจาก Sheets)</p>
+            </div>
+        </header>
+
+        <!-- Summary Cards (สรุปยอดรวม) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
+                <h3 class="text-gray-500 text-sm font-semibold mb-1">รายรับรวม (2 เดือน)</h3>
+                <p class="text-3xl font-bold text-blue-600">฿1,043,336</p>
+                <p class="text-xs text-green-500 mt-2">▲ ก.พ. เพิ่มขึ้นเล็กน้อย (+0.5%)</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500">
+                <h3 class="text-gray-500 text-sm font-semibold mb-1">รายจ่ายรวม (2 เดือน)</h3>
+                <p class="text-3xl font-bold text-red-500">฿1,092,390</p>
+                <p class="text-xs text-red-500 mt-2">▲ ก.พ. พุ่งสูงขึ้น (+30.3%)</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-orange-500">
+                <h3 class="text-gray-500 text-sm font-semibold mb-1">กำไร/ขาดทุน สุทธิ (2 เดือน)</h3>
+                <p class="text-3xl font-bold text-orange-500">- ฿49,054</p>
+                <p class="text-xs text-gray-400 mt-2">ม.ค. กำไร / ก.พ. ขาดทุน</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- กราฟภาพรวมรายรับรายจ่าย -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-lg font-semibold mb-4">📈 เปรียบเทียบรายรับ-รายจ่าย (ม.ค. vs ก.พ.)</h2>
+                <canvas id="overviewChart" height="250"></canvas>
+            </div>
+
+            <!-- กราฟเจาะลึกหมวดผลไม้ -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-lg font-semibold mb-4">🍎 เจาะลึกการสั่งซื้อ "ผลไม้" ยอดฮิต</h2>
+                <canvas id="fruitChart" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Table (รายละเอียดข้อมูล) -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4">📋 รายละเอียดการเปลี่ยนแปลง (ม.ค. เทียบ ก.พ.)</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-600">
+                        <tr>
+                            <th class="py-3 px-4 rounded-tl-lg">รายการ</th>
+                            <th class="py-3 px-4">หมวดหมู่</th>
+                            <th class="py-3 px-4">มกราคม (บาท)</th>
+                            <th class="py-3 px-4">กุมภาพันธ์ (บาท)</th>
+                            <th class="py-3 px-4 rounded-tr-lg">แนวโน้ม</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-gray-700">
+                        <tr>
+                            <td class="py-3 px-4 font-medium">รวมรายรับ</td>
+                            <td class="py-3 px-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">ภาพรวม</span></td>
+                            <td class="py-3 px-4">520,281</td>
+                            <td class="py-3 px-4">523,055</td>
+                            <td class="py-3 px-4 text-green-500">▲ เพิ่มขึ้น +2,774</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-medium">รวมรายจ่าย</td>
+                            <td class="py-3 px-4"><span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">ภาพรวม</span></td>
+                            <td class="py-3 px-4">474,160</td>
+                            <td class="py-3 px-4">618,230</td>
+                            <td class="py-3 px-4 text-red-500">▲ เพิ่มขึ้น +144,070</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-medium">อโวคาโด</td>
+                            <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">ผลไม้</span></td>
+                            <td class="py-3 px-4">19,820</td>
+                            <td class="py-3 px-4">56,108</td>
+                            <td class="py-3 px-4 text-red-500">▲ เพิ่มขึ้น +36,288</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-medium">ส้ม</td>
+                            <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">ผลไม้</span></td>
+                            <td class="py-3 px-4">8,355</td>
+                            <td class="py-3 px-4">19,021</td>
+                            <td class="py-3 px-4 text-red-500">▲ เพิ่มขึ้น +10,666</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-medium">เสาวรส</td>
+                            <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">ผลไม้</span></td>
+                            <td class="py-3 px-4">3,750</td>
+                            <td class="py-3 px-4">11,435</td>
+                            <td class="py-3 px-4 text-red-500">▲ เพิ่มขึ้น +7,685</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script สำหรับสร้างกราฟ -->
+    <script>
+        // 1. กราฟภาพรวม รายรับ vs รายจ่าย
+        const ctxOverview = document.getElementById('overviewChart').getContext('2d');
+        new Chart(ctxOverview, {
+            type: 'bar',
+            data: {
+                labels: ['มกราคม', 'กุมภาพันธ์'],
+                datasets: [
+                    {
+                        label: 'รายรับ (บาท)',
+                        data: [520281, 523055],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)', // สีน้ำเงิน
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'รายจ่าย (บาท)',
+                        data: [474160, 618230],
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)', // สีแดง
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false }
+                }
+            }
+        });
+
+        // 2. กราฟเจาะลึกหมวดผลไม้ (อโวคาโด, ส้ม, เสาวรส)
+        const ctxFruit = document.getElementById('fruitChart').getContext('2d');
+        new Chart(ctxFruit, {
+            type: 'bar',
+            data: {
+                labels: ['อโวคาโด', 'ส้ม', 'เสาวรส'],
+                datasets: [
+                    {
+                        label: 'มกราคม (บาท)',
+                        data: [19820, 8355, 3750],
+                        backgroundColor: 'rgba(167, 139, 250, 0.8)', // สีม่วงอ่อน
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'กุมภาพันธ์ (บาท)',
+                        data: [56108, 19021, 11435],
+                        backgroundColor: 'rgba(124, 58, 237, 0.9)', // สีม่วงเข้ม
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
