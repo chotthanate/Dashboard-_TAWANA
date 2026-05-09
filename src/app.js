@@ -1,6 +1,6 @@
 const SPREADSHEET_ID = "1L33HQfCK1dkOwho_63Lpo63vCAKrBK0XBsAOKpRGhGk";
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`;
-const CACHE_KEY = "taona-finance-dashboard-cache-v1";
+const CACHE_KEY = "taona-finance-dashboard-cache-v2";
 const BUDDHIST_YEAR = 2569;
 
 const MONTH_SHEETS = [
@@ -88,71 +88,12 @@ function parseMonthSheet(sheet, rows) {
   const income = [];
   const expenses = [];
   const quality = [];
+  const layout = getMonthLayout(sheet.month);
 
   rows.forEach((row, rowIndex) => {
     const cells = row.c || [];
-    const revenueDate = parseDate(cells[1]);
-    const cash = toNumber(cells[2]);
-    const transfer = toNumber(cells[3]);
-    const inStore = toNumber(cells[4]);
-    const grab = toNumber(cells[5]);
-    const gokoo = toNumber(cells[6]);
-    const delivery = toNumber(cells[7]);
-    const other = toNumber(cells[8]);
-    const totalRevenue = toNumber(cells[10]) || cash + transfer + grab + gokoo + other;
-    const note = text(cells[9]);
-
-    if (revenueDate && totalRevenue > 0) {
-      if (cash) income.push(makeIncome(sheet, revenueDate, "หน้าร้าน", "เงินสด", cash, "เงินสด", note, rowIndex));
-      if (transfer) income.push(makeIncome(sheet, revenueDate, "หน้าร้าน", "เงินโอน", transfer, "เงินโอน", note, rowIndex));
-      if (grab) income.push(makeIncome(sheet, revenueDate, "Delivery", "Grab", grab, "แพลตฟอร์ม", note, rowIndex));
-      if (gokoo) income.push(makeIncome(sheet, revenueDate, "Delivery", "Gokoo", gokoo, "แพลตฟอร์ม", note, rowIndex));
-      if (other) income.push(makeIncome(sheet, revenueDate, "รายได้อื่น", note || "รายได้อื่น", other, "อื่นๆ", note, rowIndex));
-      if (!cash && !transfer && inStore) income.push(makeIncome(sheet, revenueDate, "หน้าร้าน", "รวมหน้าร้าน", inStore, "รวม", note, rowIndex));
-      if (!grab && !gokoo && delivery) income.push(makeIncome(sheet, revenueDate, "Delivery", "รวม Delivery", delivery, "รวม", note, rowIndex));
-    }
-
-    const expenseDate = parseDate(cells[12]);
-    const item = normalizeItem(text(cells[13]));
-    if (!expenseDate || !item) return;
-
-    const unit = text(cells[14]);
-    const qty = toNumber(cells[15]);
-    const price = toNumber(cells[16]);
-    const amount = toNumber(cells[17]) || (qty && price ? qty * price : 0);
-    const category = text(cells[18]) || "ไม่พบข้อมูล";
-    const subcategory = text(cells[19]) || "ไม่พบข้อมูล";
-    const expenseNote = text(cells[20]);
-
-    if (!amount) {
-      quality.push({
-        level: "warning",
-        message: `แถว ${rowIndex + 1}: "${item}" ไม่มียอดเงินรายจ่าย`,
-      });
-      return;
-    }
-    if (category.includes("ไม่พบ") || subcategory.includes("ไม่พบ")) {
-      quality.push({
-        level: "warning",
-        message: `แถว ${rowIndex + 1}: "${item}" ยังไม่ถูกจัดหมวดหมู่`,
-      });
-    }
-    expenses.push({
-      id: `e-${sheet.month}-${rowIndex}`,
-      month: sheet.month,
-      date: toISO(expenseDate),
-      type: "expense",
-      label: item,
-      detail: item,
-      unit,
-      qty,
-      price,
-      amount,
-      category,
-      subcategory,
-      payment: "",
-      note: expenseNote,
-    });
+    parseIncomeRow(sheet, layout, cells, rowIndex, income);
+    parseExpenseRow(sheet, layout, cells, rowIndex, expenses, quality);
   });
 
   const transactions = [...income, ...expenses].sort((a, b) => b.date.localeCompare(a.date));
@@ -177,6 +118,118 @@ function parseMonthSheet(sheet, rows) {
     fruitItems,
     quality,
   };
+}
+
+function getMonthLayout(month) {
+  if (month === 1) {
+    return {
+      incomeRows: { start: 4, end: 35 },
+      incomeDate: 1,
+      incomeTotal: 13,
+      incomeChannels: [
+        { index: 2, category: "หน้าร้าน", subcategory: "เงินสด", payment: "เงินสด", maxRow: 35 },
+        { index: 3, category: "หน้าร้าน", subcategory: "เงินโอนธนาคาร", payment: "เงินโอน", maxRow: 30 },
+        { index: 4, category: "หน้าร้าน", subcategory: "เงินโอนจากทรู", payment: "TrueMoney", maxRow: 35 },
+        { index: 6, category: "Delivery", subcategory: "Grab", payment: "แพลตฟอร์ม", maxRow: 35 },
+        { index: 7, category: "Delivery", subcategory: "Line Man", payment: "แพลตฟอร์ม", maxRow: 35 },
+        { index: 8, category: "Delivery", subcategory: "Shopee", payment: "แพลตฟอร์ม", maxRow: 35 },
+        { index: 9, category: "Delivery", subcategory: "Gokoo", payment: "แพลตฟอร์ม", maxRow: 35 },
+      ],
+      otherIncome: { labelIndex: 11, amountIndex: 12, maxRow: 35 },
+      expense: { date: 15, item: 16, unit: 17, qty: 18, price: 19, amount: 20, category: 21, subcategory: 22, note: 23 },
+    };
+  }
+  if (month === 2) {
+    return {
+      incomeRows: { start: 4, end: 34 },
+      incomeDate: 1,
+      incomeTotal: 11,
+      incomeChannels: [
+        { index: 2, category: "หน้าร้าน", subcategory: "เงินสด", payment: "เงินสด", maxRow: 34 },
+        { index: 3, category: "หน้าร้าน", subcategory: "เงินโอนธนาคาร", payment: "เงินโอน", maxRow: 34 },
+        { index: 4, category: "หน้าร้าน", subcategory: "เงินโอนจากทรู", payment: "TrueMoney", maxRow: 34 },
+        { index: 6, category: "Delivery", subcategory: "Grab", payment: "แพลตฟอร์ม", maxRow: 34 },
+        { index: 7, category: "Delivery", subcategory: "Gokoo", payment: "แพลตฟอร์ม", maxRow: 34 },
+      ],
+      otherIncome: { labelIndex: 9, amountIndex: 10, maxRow: 34 },
+      expense: { date: 13, item: 14, unit: 15, qty: 16, price: 17, amount: 18, category: 19, subcategory: 20, note: 21 },
+    };
+  }
+  return {
+    incomeRows: { start: 4, end: 34 },
+    incomeDate: 1,
+    incomeTotal: 10,
+    incomeChannels: [
+      { index: 2, category: "หน้าร้าน", subcategory: "เงินสด", payment: "เงินสด", maxRow: 34 },
+      { index: 3, category: "หน้าร้าน", subcategory: "เงินโอน", payment: "เงินโอน", maxRow: 34 },
+      { index: 5, category: "Delivery", subcategory: "Grab", payment: "แพลตฟอร์ม", maxRow: 34 },
+      { index: 6, category: "Delivery", subcategory: "Gokoo", payment: "แพลตฟอร์ม", maxRow: 34 },
+    ],
+    otherIncome: { labelIndex: 9, amountIndex: 8, maxRow: 34 },
+    expense: { date: 12, item: 13, unit: 14, qty: 15, price: 16, amount: 17, category: 18, subcategory: 19, note: 20 },
+  };
+}
+
+function parseIncomeRow(sheet, layout, cells, rowIndex, income) {
+  const revenueDate = parseSheetDate(cells[layout.incomeDate], sheet.month);
+  if (!revenueDate) return;
+
+  layout.incomeChannels.forEach((channel) => {
+    const amount = toNumber(cells[channel.index]);
+    if (!amount) return;
+    income.push(makeIncome(sheet, revenueDate, channel.category, channel.subcategory, amount, channel.payment, "", rowIndex));
+  });
+
+  const otherAmount = toNumber(cells[layout.otherIncome.amountIndex]);
+  if (otherAmount) {
+    const label = text(cells[layout.otherIncome.labelIndex]) || "รายรับอื่น";
+    income.push(makeIncome(sheet, revenueDate, "รายได้อื่น", label, otherAmount, "อื่นๆ", label, rowIndex));
+  }
+}
+
+function parseExpenseRow(sheet, layout, cells, rowIndex, expenses, quality) {
+  const item = normalizeItem(text(cells[layout.expense.item]));
+  if (!item) return;
+
+  const unit = text(cells[layout.expense.unit]);
+  const qty = toNumber(cells[layout.expense.qty]);
+  const price = toNumber(cells[layout.expense.price]);
+  const amount = toNumber(cells[layout.expense.amount]) || (qty && price ? qty * price : 0);
+  const expenseDate = parseSheetDate(cells[layout.expense.date], sheet.month) || (amount ? new Date(2026, sheet.month - 1, 1, 12) : null);
+  if (!expenseDate) return;
+  const category = text(cells[layout.expense.category]) || "ไม่พบข้อมูล";
+  const subcategory = text(cells[layout.expense.subcategory]) || "ไม่พบข้อมูล";
+  const expenseNote = text(cells[layout.expense.note]);
+
+  if (!amount) {
+    quality.push({
+      level: "warning",
+      message: `แถว ${rowIndex + 1}: "${item}" ไม่มียอดเงินรายจ่าย`,
+    });
+    return;
+  }
+  if (category.includes("ไม่พบ") || subcategory.includes("ไม่พบ")) {
+    quality.push({
+      level: "warning",
+      message: `แถว ${rowIndex + 1}: "${item}" ยังไม่ถูกจัดหมวดหมู่`,
+    });
+  }
+  expenses.push({
+    id: `e-${sheet.month}-${rowIndex}`,
+    month: sheet.month,
+    date: toISO(expenseDate),
+    type: "expense",
+    label: item,
+    detail: item,
+    unit,
+    qty,
+    price,
+    amount,
+    category,
+    subcategory,
+    payment: "",
+    note: expenseNote,
+  });
 }
 
 function makeIncome(sheet, date, category, subcategory, amount, payment, note, rowIndex) {
@@ -211,6 +264,14 @@ function parseDate(cell) {
     if (match) return new Date(Number(match[1]), Number(match[2]), Number(match[3]), 12);
   }
   return null;
+}
+
+function parseSheetDate(cell, month) {
+  const value = raw(cell);
+  if (typeof value === "number" && value >= 1 && value <= 31) {
+    return new Date(2026, month - 1, value, 12);
+  }
+  return parseDate(cell);
 }
 
 function raw(cell) {
